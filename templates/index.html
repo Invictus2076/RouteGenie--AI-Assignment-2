@@ -1,0 +1,622 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>RouteGenie — STRIPS & PDDL</title>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;700&family=DM+Sans:wght@300;400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+:root{--navy:#0b1d35;--navy-light:#132845;--gold:#c9a84c;--gold-light:#e8c97a;--gold-pale:#fdf5e4;--teal:#1d9e75;--teal-light:#e1f5ee;--coral:#d85a30;--coral-light:#faece7;--bg:#f6f4ef;--card:#fff;--text:#1a1a2e;--muted:#6b6b80;--border:#e0dbd0;--r:12px;--rs:8px}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;font-size:14px}
+/* Header */
+.hdr{background:var(--navy);color:#fff;padding:0 2rem;display:flex;align-items:center;justify-content:space-between;height:60px;position:sticky;top:0;z-index:100;border-bottom:1px solid rgba(201,168,76,.3)}
+.hdr-logo{font-family:'Playfair Display',serif;font-size:1.3rem;color:var(--gold-light);display:flex;align-items:center;gap:10px}
+.hdr-logo .ico{width:34px;height:34px;background:linear-gradient(135deg,var(--gold),var(--gold-light));border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:18px}
+.hdr-sub{font-size:10px;color:rgba(255,255,255,.4);letter-spacing:.15em;text-transform:uppercase}
+.badges{display:flex;gap:6px}
+.badges span{background:rgba(201,168,76,.15);border:1px solid rgba(201,168,76,.35);color:var(--gold-light);font-size:10px;font-family:'JetBrains Mono',monospace;padding:3px 8px;border-radius:4px}
+/* Layout */
+.app{display:flex;height:calc(100vh - 60px);overflow:hidden}
+.sidebar{width:300px;min-width:300px;background:var(--navy);overflow-y:auto;padding:1.25rem;display:flex;flex-direction:column;gap:.9rem;border-right:1px solid rgba(201,168,76,.2)}
+.main{flex:1;overflow-y:auto;display:flex;flex-direction:column}
+/* Sidebar */
+.sec{background:rgba(255,255,255,.05);border:1px solid rgba(201,168,76,.2);border-radius:var(--r);padding:1rem}
+.sec-title{font-size:9px;letter-spacing:.18em;text-transform:uppercase;color:var(--gold);font-weight:600;margin-bottom:.75rem;display:flex;align-items:center;gap:6px}
+.sec-title::after{content:'';flex:1;height:1px;background:rgba(201,168,76,.2)}
+.fl{margin-bottom:.65rem}
+.fl label{display:block;font-size:11px;color:rgba(255,255,255,.5);margin-bottom:4px;font-weight:500}
+.fl select,.fl input[type=text],.fl input[type=date],.fl input[type=number]{width:100%;padding:7px 10px;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.15);border-radius:var(--rs);color:#fff;font-family:'DM Sans',sans-serif;font-size:13px;outline:none;transition:border-color .2s}
+.fl select:focus,.fl input:focus{border-color:var(--gold)}
+.fl select option{background:var(--navy-light)}
+.bgt-show{font-family:'Playfair Display',serif;font-size:1.4rem;color:var(--gold-light);text-align:center;padding:4px 0;font-weight:600}
+.fl input[type=range]{width:100%;accent-color:var(--gold);cursor:pointer}
+.chips{display:grid;grid-template-columns:1fr 1fr;gap:5px}
+.chip{display:flex;align-items:center;gap:5px;padding:5px 8px;border:1px solid rgba(255,255,255,.15);border-radius:20px;cursor:pointer;transition:all .2s;font-size:11px;color:rgba(255,255,255,.65);user-select:none}
+.chip.on{border-color:var(--gold);background:rgba(201,168,76,.15);color:var(--gold-light)}
+.go-btn{width:100%;padding:12px;background:linear-gradient(135deg,var(--gold),#b8860b);border:none;border-radius:var(--r);color:var(--navy);font-family:'Playfair Display',serif;font-size:1rem;font-weight:700;cursor:pointer;transition:all .25s;box-shadow:0 4px 16px rgba(201,168,76,.3)}
+.go-btn:hover{transform:translateY(-1px);box-shadow:0 6px 24px rgba(201,168,76,.45)}
+.go-btn:disabled{opacity:.6;cursor:not-allowed;transform:none}
+/* Tabs */
+.tabs{display:flex;background:var(--card);border-bottom:1px solid var(--border);padding:0 1.5rem;position:sticky;top:0;z-index:10}
+.tab{padding:14px 16px;font-size:13px;font-weight:500;color:var(--muted);cursor:pointer;border-bottom:2px solid transparent;transition:all .2s;white-space:nowrap}
+.tab.on{color:var(--navy);border-bottom-color:var(--gold);font-weight:600}
+.panel{display:none;padding:1.5rem}
+.panel.on{display:block}
+/* Welcome */
+.welcome{display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:40vh;text-align:center;padding:2rem}
+.welcome .wi{font-size:4rem;margin-bottom:1rem;opacity:.6}
+.welcome h2{font-family:'Playfair Display',serif;font-size:1.8rem;color:var(--navy);margin-bottom:.5rem}
+.welcome p{color:var(--muted);max-width:380px;line-height:1.7}
+/* Info banner */
+.info{background:linear-gradient(135deg,#e6f1fb,#fff);border:1px solid #b5d4f4;border-left:3px solid #378add;border-radius:var(--rs);padding:10px 14px;font-size:12px;color:#185fa5;margin-bottom:1rem;line-height:1.6}
+.warn{background:var(--coral-light);border:1px solid #f0997b;border-left:3px solid var(--coral);border-radius:var(--rs);padding:10px 14px;margin-bottom:1rem;font-size:12px;color:#993c1d}
+/* Cards */
+.card{background:var(--card);border:1px solid var(--border);border-radius:var(--r);overflow:hidden;margin-bottom:1rem}
+.card-hdr{padding:.85rem 1.1rem;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between}
+.card-title{font-family:'Playfair Display',serif;font-size:.95rem;font-weight:700;color:var(--navy)}
+.card-body{padding:1rem 1.1rem}
+/* KB Grid */
+.kb-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(270px,1fr));gap:1rem}
+.kb-card{background:var(--card);border:1px solid var(--border);border-radius:var(--r);overflow:hidden;transition:box-shadow .2s,transform .2s}
+.kb-card:hover{box-shadow:0 6px 24px rgba(11,29,53,.12);transform:translateY(-2px)}
+.kb-card-hdr{padding:12px 14px;display:flex;align-items:center;gap:10px}
+.city-flag{font-size:1.8rem}
+.city-name{font-family:'Playfair Display',serif;font-size:1rem;font-weight:700;color:var(--navy)}
+.city-sub{font-size:11px;color:var(--muted)}
+.kb-card-body{padding:8px 14px 12px;border-top:1px solid var(--border)}
+.kb-row{display:flex;justify-content:space-between;padding:3px 0;font-size:12px}
+.kb-key{color:var(--muted)}
+.kb-val{font-weight:500}
+.tags{display:flex;flex-wrap:wrap;gap:4px;margin-top:6px}
+.tag{font-size:10px;padding:2px 7px;border-radius:10px;font-weight:500;background:var(--gold-pale);color:#7a5c0a}
+/* STRIPS operators */
+.ops-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:1rem}
+.op-card{background:var(--card);border:1px solid var(--border);border-radius:var(--r);overflow:hidden}
+.op-hdr{padding:10px 14px;background:var(--navy);display:flex;align-items:center;gap:8px}
+.op-name{font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--gold-light);font-weight:500}
+.op-body{padding:10px 14px;font-size:12px}
+.op-desc{font-size:11px;color:var(--muted);margin-bottom:6px;line-height:1.5}
+.op-row{display:flex;gap:6px;padding:2px 0;align-items:flex-start}
+.op-lbl{font-size:9px;font-weight:700;padding:2px 5px;border-radius:3px;white-space:nowrap;min-width:30px;text-align:center;font-family:'JetBrains Mono',monospace}
+.op-lbl.pre{background:#e8f4fd;color:#185fa5}
+.op-lbl.add{background:var(--teal-light);color:#0f6e56}
+.op-lbl.del{background:var(--coral-light);color:#993c1d}
+.op-val{font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--text);line-height:1.5}
+.op-val.del{color:#993c1d}
+/* Plan summary header */
+.plan-hdr{background:linear-gradient(135deg,var(--navy),var(--navy-light));color:#fff;padding:1.5rem;border-radius:var(--r);margin-bottom:1.2rem;position:relative;overflow:hidden}
+.plan-hdr::after{content:'✈';position:absolute;right:1.5rem;bottom:-.5rem;font-size:5rem;opacity:.07;line-height:1}
+.plan-route{font-family:'Playfair Display',serif;font-size:1.5rem;font-weight:700;color:var(--gold-light);margin-bottom:4px}
+.plan-meta{display:flex;gap:1.5rem;flex-wrap:wrap;margin-top:.75rem}
+.plan-meta-item{font-size:12px;color:rgba(255,255,255,.6)}
+.plan-meta-item strong{color:#fff;font-weight:500}
+/* Stats */
+.stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:10px;margin-bottom:1.2rem}
+.stat{background:var(--card);border:1px solid var(--border);border-radius:var(--rs);padding:10px 12px;text-align:center}
+.stat-val{font-family:'Playfair Display',serif;font-size:1.4rem;font-weight:700;color:var(--navy);line-height:1.2}
+.stat-lbl{font-size:11px;color:var(--muted);margin-top:2px}
+/* Timeline */
+.timeline{position:relative;padding-left:28px}
+.timeline::before{content:'';position:absolute;left:10px;top:8px;bottom:8px;width:2px;background:linear-gradient(to bottom,var(--gold),var(--teal));border-radius:2px}
+.tl-item{position:relative;margin-bottom:.9rem;background:var(--card);border:1px solid var(--border);border-radius:var(--r);overflow:hidden;animation:fadeIn .4s ease both}
+@keyframes fadeIn{from{opacity:0;transform:translateX(-10px)}to{opacity:1;transform:translateX(0)}}
+.tl-item::before{content:'';position:absolute;left:-22px;top:16px;width:10px;height:10px;border-radius:50%;border:2px solid var(--gold);background:var(--card);z-index:1}
+.tl-hdr{display:flex;align-items:center;gap:10px;padding:10px 14px;border-bottom:1px solid var(--border)}
+.tl-num{width:24px;height:24px;background:var(--navy);border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:11px;color:var(--gold-light);font-weight:700;flex-shrink:0}
+.tl-action{font-weight:600;font-size:13px;color:var(--navy);flex:1}
+.tl-badge{font-size:10px;padding:2px 8px;border-radius:4px;font-weight:600;letter-spacing:.04em;text-transform:uppercase;font-family:'JetBrains Mono',monospace}
+.tl-badge.flight{background:#e6f1fb;color:#185fa5}
+.tl-badge.hotel{background:var(--gold-pale);color:#7a5c0a}
+.tl-badge.activity{background:var(--teal-light);color:#0f6e56}
+.tl-badge.transport{background:var(--coral-light);color:#993c1d}
+.tl-body{padding:10px 14px;display:flex;gap:1rem;flex-wrap:wrap}
+.tl-detail{font-size:12px;color:var(--muted);flex:1;min-width:180px;line-height:1.7}
+.tl-detail strong{color:var(--text)}
+.tl-strips{font-family:'JetBrains Mono',monospace;font-size:10px;background:#f6f4ef;border:1px solid var(--border);border-radius:var(--rs);padding:8px 10px;min-width:200px;flex:1}
+.tl-strips .k{color:#185fa5}
+.tl-strips .v{color:#639922}
+.tl-strips .d{color:#993c1d}
+/* Goal Stack */
+.gs-item{display:flex;align-items:center;gap:8px;margin-bottom:5px}
+.gs-num{width:22px;height:22px;background:var(--navy);border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:10px;color:#fff;font-weight:600;flex-shrink:0}
+.gs-box{flex:1;padding:7px 12px;border-radius:var(--rs);font-size:12px;border:1px solid var(--border);font-weight:500}
+.gs-box.goal{border-left:3px solid var(--gold);background:var(--gold-pale);color:#7a5c0a}
+.gs-box.subgoal{border-left:3px solid #378add;background:#e6f1fb;color:#185fa5}
+.gs-box.action{border-left:3px solid var(--teal);background:var(--teal-light);color:#0f6e56}
+.gs-box.satisfied{border-left:3px solid #639922;background:#eaf3de;color:#3b6d11}
+.gs-type{font-size:9px;padding:1px 5px;border-radius:3px;background:rgba(11,29,53,.08);color:var(--muted);margin-left:auto;font-family:'JetBrains Mono',monospace;text-transform:uppercase}
+/* State panel */
+.state-panel{background:var(--navy);border-radius:var(--r);padding:1rem 1.25rem;margin-top:1.2rem}
+.state-title{font-family:'Playfair Display',serif;color:var(--gold-light);font-size:.9rem;margin-bottom:.75rem;border-bottom:1px solid rgba(201,168,76,.2);padding-bottom:6px}
+.atoms{display:flex;flex-wrap:wrap;gap:5px}
+.atom{font-family:'JetBrains Mono',monospace;font-size:10px;padding:3px 8px;border-radius:4px;border:1px solid rgba(255,255,255,.15);color:rgba(255,255,255,.7)}
+.atom.true{border-color:var(--teal);color:#5dcaa5;background:rgba(29,158,117,.1)}
+.atom.goal{border-color:var(--gold);color:var(--gold-light);background:rgba(201,168,76,.1)}
+/* PDDL viewer */
+.pddl-view{background:#0d1117;border-radius:var(--r);padding:1.25rem;font-family:'JetBrains Mono',monospace;font-size:11px;line-height:1.7;overflow-x:auto;color:#c9d1d9;max-height:500px;overflow-y:auto}
+.pddl-comment{color:#6e7681}
+.pddl-key{color:#ff7b72}
+.pddl-str{color:#a5d6ff}
+.pddl-paren{color:#e6edf3}
+.pddl-pred{color:#79c0ff}
+.pddl-param{color:#d2a8ff}
+/* divider */
+.divider{display:flex;align-items:center;gap:1rem;margin:1.2rem 0 .8rem}
+.divider h3{font-family:'Playfair Display',serif;font-size:1rem;font-weight:700;color:var(--navy);white-space:nowrap}
+.divider::after{content:'';flex:1;height:1px;background:var(--border)}
+/* loading */
+.loader{height:3px;background:linear-gradient(90deg,var(--gold),var(--teal),var(--gold));background-size:200% 100%;animation:load 1.2s linear infinite;border-radius:2px;margin-bottom:1rem}
+@keyframes load{to{background-position:-200% 0}}
+.loader-txt{font-family:'JetBrains Mono',monospace;font-size:12px;color:var(--muted);text-align:center;padding:2rem}
+::-webkit-scrollbar{width:6px}::-webkit-scrollbar-track{background:transparent}::-webkit-scrollbar-thumb{background:rgba(11,29,53,.15);border-radius:3px}
+.sidebar::-webkit-scrollbar-thumb{background:rgba(255,255,255,.15)}
+</style>
+</head>
+<body>
+<header class="hdr">
+  <div class="hdr-logo">
+    <div class="ico">✈</div>
+    <div>RouteGenie<div class="hdr-sub">STRIPS + Goal Stack + PDDL</div></div>
+  </div>
+  <div class="badges">
+    <span>Python</span><span>PDDL 1.2</span><span>STRIPS</span><span>Flask</span>
+  </div>
+</header>
+
+<div class="app">
+<!-- ── SIDEBAR ── -->
+<aside class="sidebar">
+  <div class="sec">
+    <div class="sec-title">Trip Setup</div>
+    <div class="fl">
+      <label>Origin</label>
+      <select id="origin">
+        {% for id,name,flag in origins %}
+        <option value="{{ id }}">{{ flag }} {{ name }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div class="fl">
+      <label>Destination</label>
+      <select id="destination">
+        {% for id,name,flag in destinations %}
+        <option value="{{ id }}">{{ flag }} {{ name }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div class="fl">
+      <label>Departure Date</label>
+      <input type="date" id="dep-date" value="2025-06-15">
+    </div>
+    <div class="fl">
+      <label>Duration (Days)</label>
+      <select id="duration">
+        <option value="3">3 days</option>
+        <option value="5" selected>5 days</option>
+        <option value="7">7 days</option>
+        <option value="10">10 days</option>
+        <option value="14">14 days</option>
+      </select>
+    </div>
+  </div>
+
+  <div class="sec">
+    <div class="sec-title">Budget & Preferences</div>
+    <div class="fl">
+      <label>Total Budget (INR)</label>
+      <div class="bgt-show" id="bgt-show">₹2,50,500</div>
+      <input type="range" id="budget" min="500" max="15000" step="250" value="3000">
+    </div>
+    <div class="fl">
+      <label>Travellers</label>
+      <select id="travellers">
+        <option value="1">Solo traveller</option>
+        <option value="2" selected>2 travellers</option>
+        <option value="3">3 travellers</option>
+        <option value="4">4 travellers</option>
+      </select>
+    </div>
+    <div class="fl">
+      <label>Hotel Style</label>
+      <select id="hotel-style">
+        <option value="budget">Budget / Hostel</option>
+        <option value="midrange" selected>Mid-range Hotel</option>
+        <option value="luxury">Luxury / 5-Star</option>
+        <option value="boutique">Boutique</option>
+      </select>
+    </div>
+  </div>
+
+  <div class="sec">
+    <div class="sec-title">Interests</div>
+    <div class="chips" id="chips">
+      <div class="chip on" data-v="culture">🏛️ Culture</div>
+      <div class="chip on" data-v="food">🍜 Food</div>
+      <div class="chip" data-v="beach">🏖️ Beach</div>
+      <div class="chip" data-v="hiking">🥾 Hiking</div>
+      <div class="chip on" data-v="shopping">🛍️ Shopping</div>
+      <div class="chip" data-v="nightlife">🎭 Nightlife</div>
+      <div class="chip" data-v="photography">📸 Photography</div>
+      <div class="chip" data-v="nature">🌿 Nature</div>
+    </div>
+  </div>
+
+  <button class="go-btn" id="go-btn" onclick="runPlan()">✦ Generate Optimal Plan</button>
+</aside>
+
+<!-- ── MAIN ── -->
+<main class="main">
+  <div class="tabs">
+    <div class="tab on"  onclick="tab('welcome',this)">Overview</div>
+    <div class="tab"     onclick="tab('kb',this)">Knowledge Base</div>
+    <div class="tab"     onclick="tab('strips',this)">STRIPS Operators</div>
+    <div class="tab"     onclick="tab('gs',this)">Goal Stack</div>
+    <div class="tab"     onclick="tab('plan',this)">Generated Plan</div>
+    <div class="tab"     onclick="tab('pddl',this)">PDDL Files</div>
+  </div>
+
+  <!-- Welcome -->
+  <div class="panel on" id="tab-welcome">
+    <div class="welcome">
+      <div class="wi">🗺️</div>
+      <h2>RouteGenie</h2>
+      <p>Your AI travel companion. Configure your trip and click <strong>Generate Optimal Plan</strong>. RouteGenie builds real PDDL files, runs Goal Stack planning, and sequences a conflict-free itinerary.</p>
+    </div>
+    <div class="info">
+      <strong>Stack:</strong> Python (STRIPS engine) · PDDL 1.2 domain &amp; problem files · Flask REST API · Goal Stack backward-chaining · Knowledge Base of 8 world destinations
+    </div>
+    <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:1rem">
+      <div class="card"><div class="card-hdr"><div class="card-title">🧠 Knowledge Base</div></div><div class="card-body" style="font-size:13px;color:var(--muted);line-height:1.7">8 destination cities with hotels, attractions, flight routes, and costs encoded as typed PDDL predicates.</div></div>
+      <div class="card"><div class="card-hdr"><div class="card-title">⚙️ STRIPS Engine</div></div><div class="card-body" style="font-size:13px;color:var(--muted);line-height:1.7">8 operators (BUY_FLIGHT, TAKE_FLIGHT, BOOK_HOTEL, CHECK_IN, ARRANGE_TRANSPORT, VISIT_ATTRACTION, EXPERIENCE_CULTURE, COMPLETE_TRIP) with PRE/ADD/DEL lists.</div></div>
+      <div class="card"><div class="card-hdr"><div class="card-title">📚 Goal Stack</div></div><div class="card-body" style="font-size:13px;color:var(--muted);line-height:1.7">Backward-chaining planner pushes goals, decomposes into sub-goals, finds applicable operators, and produces a forward-executable plan.</div></div>
+      <div class="card"><div class="card-hdr"><div class="card-title">📄 PDDL Output</div></div><div class="card-body" style="font-size:13px;color:var(--muted);line-height:1.7">Every plan generates a valid PDDL 1.2 domain + problem file downloadable and runnable with Fast Downward or any PDDL planner.</div></div>
+    </div>
+  </div>
+
+  <!-- KB -->
+  <div class="panel" id="tab-kb">
+    <div class="info">Facts stored in the Knowledge Base. These are ground atoms that populate the PDDL <code>(:init …)</code> section.</div>
+    <div class="kb-grid" id="kb-grid"><div class="loader-txt">Loading…</div></div>
+  </div>
+
+  <!-- STRIPS -->
+  <div class="panel" id="tab-strips">
+    <div class="info">STRIPS operators from <code>travel_domain.pddl</code>. Each operator defines what the AI agent can do, under what conditions, and what changes in the world.</div>
+    <div class="ops-grid" id="ops-grid"></div>
+  </div>
+
+  <!-- Goal Stack -->
+  <div class="panel" id="tab-gs">
+    <div class="info" id="gs-info">Generate a plan to see the Goal Stack decomposition and planning trace.</div>
+    <div id="gs-content"></div>
+  </div>
+
+  <!-- Plan -->
+  <div class="panel" id="tab-plan">
+    <div id="plan-content">
+      <div class="welcome"><div class="wi">📋</div><h2>No Plan Yet</h2><p>Fill in your details and click Generate Plan.</p></div>
+    </div>
+  </div>
+
+  <!-- PDDL -->
+  <div class="panel" id="tab-pddl">
+    <div class="info">Live-generated PDDL files. The domain file defines operators; the problem file encodes your specific trip as initial + goal states.</div>
+    <div style="display:flex;gap:1rem;margin-bottom:1rem;flex-wrap:wrap">
+      <button onclick="showPddl('domain')" style="padding:7px 16px;border:1px solid var(--border);background:var(--card);border-radius:var(--rs);cursor:pointer;font-family:'DM Sans',sans-serif;font-size:13px;font-weight:500">📄 Domain PDDL</button>
+      <button onclick="showPddl('problem')" style="padding:7px 16px;border:1px solid var(--border);background:var(--card);border-radius:var(--rs);cursor:pointer;font-family:'DM Sans',sans-serif;font-size:13px;font-weight:500">📝 Problem PDDL</button>
+      <a id="dl-link" href="#" download style="display:none;padding:7px 16px;background:var(--gold);color:var(--navy);border-radius:var(--rs);text-decoration:none;font-size:13px;font-weight:600">⬇ Download</a>
+    </div>
+    <div class="pddl-view" id="pddl-view">Generate a plan first to view and download PDDL files.</div>
+  </div>
+</main>
+</div>
+
+<script>
+// ── State ──────────────────────────────────────────────────────────────
+let lastResult = null;
+
+// ── Tabs ──────────────────────────────────────────────────────────────
+function tab(id, el) {
+  document.querySelectorAll('.panel').forEach(p => p.classList.remove('on'));
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('on'));
+  document.getElementById('tab-' + id).classList.add('on');
+  el.classList.add('on');
+}
+
+// ── Budget slider ─────────────────────────────────────────────────────
+const USD_TO_INR = 83.5;
+
+function fmtINR(usd) {
+  const rupees = Math.round(usd * USD_TO_INR);
+  const s = String(rupees);
+  if (s.length <= 3) return '₹' + s;
+  const last3 = s.slice(-3);
+  let rest = s.slice(0, -3);
+  const parts = [];
+  while (rest.length > 2) { parts.unshift(rest.slice(-2)); rest = rest.slice(0, -2); }
+  if (rest) parts.unshift(rest);
+  return '₹' + parts.join(',') + ',' + last3;
+}
+
+document.getElementById('budget').addEventListener('input', function() {
+  document.getElementById('bgt-show').textContent = fmtINR(Number(this.value));
+});
+
+// ── Interest chips ────────────────────────────────────────────────────
+document.querySelectorAll('.chip').forEach(c => {
+  c.addEventListener('click', () => c.classList.toggle('on'));
+});
+
+function getInterests() {
+  return [...document.querySelectorAll('.chip.on')].map(c => c.dataset.v);
+}
+
+// ── Static STRIPS operators ───────────────────────────────────────────
+const STATIC_OPS = [
+  { name:"BUY_FLIGHT_TICKET(?a,?origin,?dest)", icon:"🎫",
+    desc:"Purchase flight ticket(s) between two cities.",
+    pre:["at(?a,?origin)","connected(?origin,?dest)","affordable-flight(?origin,?dest,?a)","budget-sufficient(?a)"],
+    add:["has-ticket(?a,?origin,?dest)"], del:[] },
+  { name:"TAKE_FLIGHT(?a,?origin,?dest)", icon:"✈️",
+    desc:"Board and fly from origin to destination.",
+    pre:["at(?a,?origin)","has-ticket(?a,?origin,?dest)","connected(?origin,?dest)"],
+    add:["at(?a,?dest)"], del:["at(?a,?origin)","has-ticket(?a,?origin,?dest)"] },
+  { name:"BOOK_HOTEL(?a,?h,?c)", icon:"🏨",
+    desc:"Reserve accommodation at destination city.",
+    pre:["at(?a,?c)","hotel-in(?h,?c)","affordable-hotel(?h,?a)"],
+    add:["has-reservation(?a,?h)"], del:[] },
+  { name:"CHECK_IN(?a,?h,?c)", icon:"🔑",
+    desc:"Check into hotel and establish base of operations.",
+    pre:["at(?a,?c)","has-reservation(?a,?h)","hotel-in(?h,?c)"],
+    add:["staying-at(?a,?h)","base-established(?a,?c)"], del:[] },
+  { name:"ARRANGE_LOCAL_TRANSPORT(?a,?t,?c)", icon:"🚌",
+    desc:"Arrange local transport pass or rental.",
+    pre:["at(?a,?c)","transport-available(?t,?c)"],
+    add:["transport-arranged(?a,?c)"], del:[] },
+  { name:"VISIT_ATTRACTION(?a,?att,?c)", icon:"📍",
+    desc:"Visit a tourist attraction. Requires base and transport.",
+    pre:["at(?a,?c)","base-established(?a,?c)","transport-arranged(?a,?c)","attraction-open(?att)","affordable-entry(?att,?a)"],
+    add:["visited(?a,?att)"], del:[] },
+  { name:"EXPERIENCE_LOCAL_CULTURE(?a,?c,?att)", icon:"🌍",
+    desc:"Achieve cultural immersion — requires at least one visit.",
+    pre:["at(?a,?c)","base-established(?a,?c)","visited(?a,?att)"],
+    add:["culture-experienced(?a,?c)"], del:[] },
+  { name:"COMPLETE_TRIP(?a,?c,?h)", icon:"🏁",
+    desc:"Check out and mark trip as complete.",
+    pre:["at(?a,?c)","staying-at(?a,?h)","base-established(?a,?c)","culture-experienced(?a,?c)"],
+    add:["trip-complete(?a,?c)"], del:["staying-at(?a,?h)","base-established(?a,?c)"] },
+];
+
+function renderStrips() {
+  document.getElementById('ops-grid').innerHTML = STATIC_OPS.map(op => `
+    <div class="op-card">
+      <div class="op-hdr"><span style="font-size:1rem">${op.icon}</span>
+        <span class="op-name">${op.name}</span></div>
+      <div class="op-body">
+        <div class="op-desc">${op.desc}</div>
+        ${op.pre.map(p=>`<div class="op-row"><span class="op-lbl pre">PRE</span><span class="op-val">${p}</span></div>`).join('')}
+        ${op.add.map(a=>`<div class="op-row"><span class="op-lbl add">ADD</span><span class="op-val">${a}</span></div>`).join('')}
+        ${op.del.map(d=>`<div class="op-row"><span class="op-lbl del">DEL</span><span class="op-val del">${d}</span></div>`).join('')}
+      </div>
+    </div>`).join('');
+}
+
+// ── Load KB ───────────────────────────────────────────────────────────
+async function loadKB() {
+  const res = await fetch('/api/kb');
+  const cities = await res.json();
+  document.getElementById('kb-grid').innerHTML = cities.map(c => `
+    <div class="kb-card">
+      <div class="kb-card-hdr">
+        <span class="city-flag">${c.flag}</span>
+        <div><div class="city-name">${c.name}</div>
+          <div class="city-sub">${c.country} · ${c.climate}</div></div>
+      </div>
+      <div class="kb-card-body">
+        <div class="kb-row"><span class="kb-key">Cost/day</span><span class="kb-val">~$${c.cost_per_day}/person</span></div>
+        <div class="kb-row"><span class="kb-key">Best season</span><span class="kb-val">${c.best_season}</span></div>
+        <div class="kb-row"><span class="kb-key">Transport</span><span class="kb-val">${c.transport}</span></div>
+        <div class="kb-row"><span class="kb-key">Attractions</span><span class="kb-val">${c.num_attractions} listed</span></div>
+        <div class="kb-row"><span class="kb-key">Hotels</span><span class="kb-val">${c.num_hotels} styles</span></div>
+        <div class="tags">${c.tags.map(t=>`<span class="tag">${t}</span>`).join('')}</div>
+      </div>
+    </div>`).join('');
+}
+
+// ── Generate Plan ─────────────────────────────────────────────────────
+async function runPlan() {
+  const origin = document.getElementById('origin').value;
+  const dest   = document.getElementById('destination').value;
+  if (origin === dest) { alert('Choose a different destination from your origin.'); return; }
+
+  const btn = document.getElementById('go-btn');
+  btn.disabled = true; btn.textContent = '⏳ Planning…';
+
+  // Show loaders
+  document.getElementById('plan-content').innerHTML =
+    `<div class="loader"></div><div class="loader-txt">🧠 Running STRIPS + Goal Stack Planner…<br><span style="color:var(--gold)">Generating PDDL · Chaining operators · Sequencing actions</span></div>`;
+  document.getElementById('gs-content').innerHTML =
+    `<div class="loader"></div><div class="loader-txt">Building goal stack…</div>`;
+
+  // Switch to plan tab
+  tab('plan', document.querySelectorAll('.tab')[4]);
+
+  const payload = {
+    origin, destination: dest,
+    budget:      document.getElementById('budget').value,
+    duration:    document.getElementById('duration').value,
+    hotel_style: document.getElementById('hotel-style').value,
+    interests:   getInterests(),
+    travellers:  document.getElementById('travellers').value,
+    dep_date:    document.getElementById('dep-date').value,
+  };
+
+  try {
+    const r = await fetch('/api/plan', {
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify(payload)
+    });
+    const data = await r.json();
+
+    if (!data.ok) throw new Error(data.error);
+
+    lastResult = data.result;
+    renderPlan(data.result);
+    renderGoalStack(data.result);
+
+  } catch(e) {
+    document.getElementById('plan-content').innerHTML =
+      `<div class="warn">❌ Planner error: ${e.message}</div>`;
+  }
+
+  btn.disabled = false; btn.textContent = '✦ Generate Optimal Plan';
+}
+
+// ── Render Goal Stack ─────────────────────────────────────────────────
+function renderGoalStack(result) {
+  const gs = result.goal_stack;
+  const items = gs.map((item, i) => {
+    const indent = (item.level || 0) * 20;
+    const typeLabel = {goal:'GOAL',subgoal:'SUB-GOAL',action:'ACTION',satisfied:'DONE'}[item.type] || item.type;
+    return `<div class="gs-item" style="margin-left:${indent}px;animation:fadeIn .3s ease ${i*.04}s both">
+      <div class="gs-num">${i+1}</div>
+      <div class="gs-box ${item.type}">
+        ${item.label}
+        ${item.operator ? `<code style="font-size:10px;color:var(--teal);font-family:'JetBrains Mono',monospace"> → ${item.operator}</code>` : ''}
+        <span class="gs-type">${typeLabel}</span>
+      </div>
+    </div>`;
+  }).join('');
+
+  const initAtoms = result.initial_state.slice(0,12);
+  const goalAtoms = result.goal_atoms;
+
+  document.getElementById('gs-info').textContent =
+    `Goal stack for trip to ${result.summary.city_name}. ` +
+    `${gs.length} steps via backward-chaining decomposition.`;
+
+  document.getElementById('gs-content').innerHTML = `
+    <div style="display:flex;gap:1.5rem;flex-wrap:wrap">
+      <div style="flex:1;min-width:280px">
+        <div style="font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);font-weight:600;margin-bottom:10px;display:flex;align-items:center;gap:8px">
+          <div style="width:3px;height:14px;background:var(--gold);border-radius:2px"></div>Planning Trace
+        </div>
+        ${items}
+      </div>
+      <div style="width:280px">
+        <div style="font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);font-weight:600;margin-bottom:10px">Initial State</div>
+        <div class="state-panel">
+          <div class="state-title">World State Atoms (:init)</div>
+          <div class="atoms">${initAtoms.map(a=>`<span class="atom true">${a}</span>`).join('')}</div>
+        </div>
+        <div class="state-panel" style="margin-top:.8rem">
+          <div class="state-title">Goal Atoms (:goal)</div>
+          <div class="atoms">${goalAtoms.map(a=>`<span class="atom goal">${a}</span>`).join('')}</div>
+        </div>
+      </div>
+    </div>`;
+}
+
+// ── Render Plan ───────────────────────────────────────────────────────
+function renderPlan(result) {
+  const s = result.summary;
+  const warnHtml = s.warnings.length ?
+    `<div class="warn">⚠️ ${s.warnings.join(' ')}</div>` : '';
+
+  const tlHtml = result.actions.map((a, i) => `
+    <div class="tl-item" style="animation-delay:${i*.05}s">
+      <div class="tl-hdr">
+        <div class="tl-num">${a.step}</div>
+        <div class="tl-action">${a.name}</div>
+        <span class="tl-badge ${a.type}">${a.type}</span>
+      </div>
+      <div class="tl-body">
+        <div class="tl-detail">
+          <strong>Day ${a.day} · ${a.date}</strong><br>
+          ${a.description}
+          ${a.cost > 0 ? `<br><strong>Cost:</strong> $${a.cost.toLocaleString()}` : ''}
+        </div>
+        <div class="tl-strips">
+          <div><span class="k">OPERATOR: </span><span style="color:var(--gold-light)">${a.name.split('(')[0]}</span></div>
+          ${a.preconditions.slice(0,3).map(p=>`<div><span class="k">PRE: </span>${p}</div>`).join('')}
+          ${a.add_effects.map(e=>`<div><span class="v">ADD: ${e}</span></div>`).join('')}
+          ${a.del_effects.map(e=>`<div><span class="d">DEL: ${e}</span></div>`).join('')}
+        </div>
+      </div>
+    </div>`).join('');
+
+  document.getElementById('plan-content').innerHTML = `
+    ${warnHtml}
+    <div class="plan-hdr">
+      <div class="plan-route">${s.origin_name} → ${s.city_name} ${s.flag}</div>
+      <div style="font-size:12px;color:rgba(255,255,255,.6)">${s.hotel} · ${s.duration} days · ${s.travellers} traveller(s) · ${s.airline}</div>
+      <div class="plan-meta">
+        <div class="plan-meta-item"><strong>${s.dep_date}</strong><br>Departure</div>
+        <div class="plan-meta-item"><strong>${s.ret_date}</strong><br>Return</div>
+        <div class="plan-meta-item"><strong>${s.total_cost}</strong><br>Est. Total</div>
+        <div class="plan-meta-item"><strong>${s.remaining}</strong><br>Buffer</div>
+        <div class="plan-meta-item"><strong>${s.flight_hours}h</strong><br>Flight</div>
+      </div>
+    </div>
+    <div class="stats">
+      <div class="stat"><div class="stat-val">${s.flight_cost}</div><div class="stat-lbl">✈ Flights</div></div>
+      <div class="stat"><div class="stat-val">${s.hotel_cost}</div><div class="stat-lbl">🏨 Hotel</div></div>
+      <div class="stat"><div class="stat-val">${s.daily_cost}</div><div class="stat-lbl">🍽 Daily</div></div>
+      <div class="stat"><div class="stat-val">${s.num_attractions}</div><div class="stat-lbl">📍 Attractions</div></div>
+      <div class="stat"><div class="stat-val">${s.duration}</div><div class="stat-lbl">📅 Days</div></div>
+    </div>
+    <div class="divider"><h3>Action Sequence — STRIPS Plan</h3></div>
+    <div class="timeline">${tlHtml}</div>
+    <div class="state-panel" style="margin-top:1.2rem">
+      <div class="state-title">Final World State — All Goals Achieved ✓</div>
+      <div class="atoms">
+        <span class="atom goal">at(traveller1,${s.origin})</span>
+        <span class="atom goal">trip-complete(traveller1,${s.destination})</span>
+        <span class="atom goal">culture-experienced(traveller1,${s.destination})</span>
+        <span class="atom goal">visited(traveller1,attractions[${s.num_attractions}])</span>
+        <span class="atom goal">budget-within-limit ✓</span>
+      </div>
+    </div>`;
+}
+
+// ── PDDL Viewer ───────────────────────────────────────────────────────
+async function showPddl(which) {
+  const view = document.getElementById('pddl-view');
+  const dl   = document.getElementById('dl-link');
+  view.textContent = 'Loading…';
+
+  try {
+    let url, filename;
+    if (which === 'domain') {
+      url = '/api/domain'; filename = 'travel_domain.pddl';
+    } else {
+      if (!lastResult) { view.textContent = 'Generate a plan first.'; return; }
+      const fn = lastResult.pddl_file.split('/').pop();
+      url = '/api/pddl/' + fn; filename = fn;
+    }
+    const r = await fetch(url);
+    const txt = await r.text();
+    view.innerHTML = syntaxHighlight(txt);
+    dl.href = url; dl.download = filename; dl.style.display = 'inline-block';
+  } catch(e) {
+    view.textContent = 'Error loading file: ' + e.message;
+  }
+}
+
+function syntaxHighlight(txt) {
+  return txt
+    .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
+    .replace(/(;;.+)/g, '<span class="pddl-comment">$1</span>')
+    .replace(/\b(define|domain|problem|requirements|types|predicates|action|parameters|precondition|effect|objects|init|goal|and|not|forall|exists|either|strips|typing|equality|negative-preconditions)\b/g,
+             '<span class="pddl-key">$1</span>')
+    .replace(/\?[a-zA-Z0-9_-]+/g, '<span class="pddl-param">$&</span>')
+    .replace(/([a-zA-Z][a-zA-Z0-9_-]*)\(/g, '<span class="pddl-pred">$1</span>(');
+}
+
+// ── Init ──────────────────────────────────────────────────────────────
+loadKB();
+renderStrips();
+</script>
+</body>
+</html>
