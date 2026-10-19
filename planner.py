@@ -446,6 +446,29 @@ class TravelPlanner:
                 f"Consider reducing hotel style or duration."
             )
 
+        # Explain an incomplete plan (an affordability precondition failed)
+        if not any(op.name.startswith("COMPLETE_TRIP") for op in plan_ops):
+            a = "traveller1"
+            budget_per_person = self.budget // self.travellers
+            reasons = []
+            if not initial_state.holds(f"budget-sufficient({a})"):
+                reasons.append(
+                    f"flights + hotel ({self._inr(self._flight_cost() + self._hotel_cost())}) "
+                    f"are more than 85% of the budget"
+                )
+            if not initial_state.holds(f"affordable-hotel({pddl_meta['hotel_id']},{a})"):
+                reasons.append(
+                    f"{self.hotel.name} costs {self._inr(self.hotel.cost_per_night)}/night, "
+                    f"above the limit of 15% of the per-person budget "
+                    f"({self._inr(budget_per_person * 0.15)})"
+                )
+            if not reasons:
+                reasons.append("a required step could not be satisfied")
+            self.warnings.append(
+                "No complete plan found: " + "; ".join(reasons) +
+                ". Try a cheaper hotel style, a higher budget or fewer days."
+            )
+
         # 4. Build rich action list for UI
         actions = self._enrich_plan(plan_ops, pddl_meta)
 

@@ -68,7 +68,7 @@ def api_kb():
             "id": k, "name": v.name, "country": v.country, "flag": v.flag,
             "climate": v.climate, "cost_per_day": v.cost_per_day,
             "best_season": v.best_season, "transport": v.transport_mode,
-            "tags": v.tags, "timezone": v.timezone,
+            "tags": v.tags, "timezone": v.timezone, "region": v.region,
             "num_hotels": len(v.hotels),
             "num_attractions": len(v.attractions),
             "hotels": {s: {"name": h.name, "cost": h.cost_per_night, "stars": h.stars}

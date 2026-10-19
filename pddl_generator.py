@@ -6,14 +6,13 @@ The resulting .pddl file is valid PDDL 1.2 and can be loaded
 by any compliant planner (Fast Downward, ENHSP, Metric-FF …).
 """
 
-from knowledge_base import CITIES, ORIGIN_CITIES, get_flight_cost
+from knowledge_base import CITIES, ORIGIN_CITIES, get_flight_cost, pddl_ident
 import os, datetime
 
 
 def sanitize(s: str) -> str:
     """Convert a string to a safe PDDL identifier."""
-    return s.lower().replace(" ", "_").replace("'","").replace(",","") \
-             .replace("-","_").replace("(","").replace(")","").replace("/","_")
+    return pddl_ident(s)
 
 
 def generate_problem(
